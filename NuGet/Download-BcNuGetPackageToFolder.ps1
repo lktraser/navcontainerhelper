@@ -231,7 +231,7 @@ try {
                         }
                     }
                     elseif ($downloadDependencies -eq 'own') {
-                        $downloadIt = ($dependencyPublisher -eq $manifest.package.authors)
+                        $downloadIt = ($dependencyPublisher -eq $manifest.package.metadata.authors)
                     }
                     elseif ($downloadDependencies -eq 'allButMicrosoft') {
                         # Download if publisher isn't Microsoft (including if publisher is empty)
@@ -256,6 +256,10 @@ try {
                     }
                 }
                 if ($downloadIt) {
+                    if ($dependencyVersion.StartsWith('[') -and $select -eq 'Exact') {
+                        # Downloading Microsoft packages for a specific version
+                        $dependencyVersion = $version
+                    }
                     $returnValue += Download-BcNuGetPackageToFolder -nuGetServerUrl $nuGetServerUrl -nuGetToken $nuGetToken -packageName $dependencyId -version $dependencyVersion -folder $package -copyInstalledAppsToFolder $copyInstalledAppsToFolder -installedPlatform $installedPlatform -installedCountry $installedCountry -installedApps @($installedApps+$returnValue) -downloadDependencies $downloadDependencies -verbose:($VerbosePreference -eq 'Continue') -select $select -allowPrerelease:$allowPrerelease -checkLocalVersion
                 }
             }
@@ -277,8 +281,10 @@ try {
                 $appFiles = Get-Item -Path (Join-Path $package "*.app")
             }
             foreach($appFile in $appFiles) {
+                Write-Host "Copying $($appFile.Name) to $folder"
                 Copy-Item $appFile.FullName -Destination $folder -Force
                 if ($copyInstalledAppsToFolder) {
+                    Write-Host "Copying $($appFile.Name) to $copyInstalledAppsToFolder"
                     Copy-Item $appFile.FullName -Destination $copyInstalledAppsToFolder -Force
                 }
             }
